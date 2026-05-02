@@ -1,4 +1,5 @@
-import { WebSocket } from "ws";
+import { spawn, type ChildProcess } from "child_process";
+import { StringDecoder } from "string_decoder";
 import type { AgentEvent } from "../shared/events.js";
 import type { AgentStateSnapshot, RpcCommand } from "../shared/protocol.js";
 
@@ -22,76 +23,113 @@ const DEFAULT_STATE: AgentStateSnapshot = {
 };
 
 export class AgentService {
-  private ws: WebSocket | null = null;
+  private process: ChildProcess | null = null;
   private callbacks: Set<EventCallback> = new Set();
   private state: AgentStateSnapshot | null = null;
   private messages: unknown[] = [];
-  private agentUrl: string | null = null;
+  private cwd: string | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectDelay = 1000;
   private maxReconnectDelay = 30000;
   private connected = false;
+  private isDisposed = false;
+  private decoder = new StringDecoder("utf8");
+  private buffer = "";
 
-  async initialize(agentUrl: string): Promise<void> {
-    this.agentUrl = agentUrl;
-    return this.connect();
+  async initialize(cwd: string): Promise<void> {
+    this.cwd = cwd;
+    return this.spawnAgent();
   }
 
-  private connect(): Promise<void> {
+  private spawnAgent(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (!this.agentUrl) {
-        reject(new Error("agentUrl not set"));
+      if (!this.cwd) {
+        reject(new Error("cwd not set"));
         return;
       }
 
       let hasResolved = false;
+      this.isDisposed = false;
 
-      this.ws = new WebSocket(this.agentUrl);
+      console.log(`Spawning pi agent in ${this.cwd}`);
 
-      this.ws.on("open", () => {
-        this.connected = true;
-        this.reconnectDelay = 1000;
-        hasResolved = true;
-        console.log(`Connected to external pi agent at ${this.agentUrl}`);
-        this.sendRaw({ type: "get_state" });
-        resolve();
+      this.process = spawn("pi", ["--mode", "rpc", "--cwd", this.cwd], {
+        stdio: ["pipe", "pipe", "pipe"],
       });
 
-      this.ws.on("message", (data) => {
-        try {
-          const msg = JSON.parse(data.toString());
-          this.handleMessage(msg);
-        } catch (err) {
-          console.error("Failed to parse agent message:", err);
+      // Handle stdout JSONL
+      this.process.stdout!.on("data", (chunk: Buffer) => {
+        this.buffer += this.decoder.write(chunk);
+        this.flushBuffer();
+      });
+
+      this.process.stdout!.on("end", () => {
+        this.buffer += this.decoder.end();
+        this.flushBuffer();
+        // Process any remaining partial line (no trailing \n)
+        if (this.buffer.length > 0) {
+          this.processLine(this.buffer);
+          this.buffer = "";
         }
       });
 
-      this.ws.on("error", (err) => {
-        console.error("External agent connection error:", err);
+      // Handle stderr (log but don't fail)
+      this.process.stderr!.on("data", (chunk: Buffer) => {
+        const text = chunk.toString().trimEnd();
+        if (text.length > 0) {
+          console.error("[pi agent stderr]", text);
+        }
+      });
+
+      // Handle process exit
+      this.process.on("exit", (code, signal) => {
+        console.log(
+          `Agent process exited (code: ${code ?? "unknown"}, signal: ${signal ?? "none"})`
+        );
+        this.connected = false;
+        this.process = null;
+        if (!hasResolved) {
+          reject(
+            new Error(
+              `Agent process exited unexpectedly (code: ${code ?? "unknown"})`
+            )
+          );
+        } else if (!this.isDisposed) {
+          this.scheduleReconnect();
+        }
+      });
+
+      // Handle process error (e.g., pi not found)
+      this.process.on("error", (err) => {
+        console.error("Agent process error:", err);
         if (!hasResolved) {
           reject(err);
         }
       });
 
-      this.ws.on("close", () => {
-        console.log("External agent connection closed");
-        this.connected = false;
-        this.ws = null;
-        this.scheduleReconnect();
-      });
+      // Resolve immediately after spawn — pi RPC streams events
+      // and we consider it "connected" once the process is running.
+      this.connected = true;
+      hasResolved = true;
+
+      // Request initial sync to populate caches
+      this.sendRaw({ type: "get_state" });
+      this.sendRaw({ type: "get_messages" });
+
+      resolve();
     });
   }
 
   private scheduleReconnect(): void {
-    if (this.reconnectTimer || !this.agentUrl) return;
+    if (this.reconnectTimer || !this.cwd) return;
 
     console.log(
-      `Reconnecting to external agent in ${this.reconnectDelay}ms...`
+      `Restarting agent process in ${this.reconnectDelay}ms...`
     );
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect().catch((err) => {
-        console.error("Reconnection failed:", err);
+      this.spawnAgent().catch((err) => {
+        console.error("Agent restart failed:", err);
         this.reconnectDelay = Math.min(
           this.reconnectDelay * 2,
           this.maxReconnectDelay
@@ -101,23 +139,63 @@ export class AgentService {
     }, this.reconnectDelay);
   }
 
+  private flushBuffer(): void {
+    while (true) {
+      const newlineIndex = this.buffer.indexOf("\n");
+      if (newlineIndex === -1) break;
+
+      let line = this.buffer.slice(0, newlineIndex);
+      this.buffer = this.buffer.slice(newlineIndex + 1);
+
+      // Strip trailing \r if present (protocol allows \r\n input)
+      if (line.endsWith("\r")) {
+        line = line.slice(0, -1);
+      }
+
+      this.processLine(line);
+    }
+  }
+
+  private processLine(line: string): void {
+    if (line.length === 0) return;
+    try {
+      const msg = JSON.parse(line);
+      this.handleMessage(msg);
+    } catch (err) {
+      console.error("Failed to parse agent JSONL:", err, "Line:", line);
+    }
+  }
+
   private handleMessage(msg: any): void {
     switch (msg.type) {
       case "event":
         this.broadcast(msg.event);
         this.updateFromEvent(msg.event);
         break;
-      case "state":
-        this.state = msg.state;
-        break;
       case "response":
-        // Responses are routed by the server layer (websocket.ts) via command IDs.
-        // The external agent sends responses for commands we forwarded.
-        // For now, we don't need to handle them here since commands are
-        // fire-and-forget from the AgentService perspective.
+        this.handleResponse(msg);
         break;
       default:
-        console.warn("Unknown message type from external agent:", msg.type);
+        console.warn("Unknown message type from agent:", msg.type);
+    }
+  }
+
+  private handleResponse(msg: any): void {
+    if (!msg.success) {
+      console.error(
+        `Agent command '${msg.command ?? "unknown"}' failed:`,
+        msg.error
+      );
+      return;
+    }
+
+    switch (msg.command) {
+      case "get_state":
+        this.state = msg.data;
+        break;
+      case "get_messages":
+        this.messages = msg.data?.messages ?? [];
+        break;
     }
   }
 
@@ -165,7 +243,8 @@ export class AgentService {
         if (this.state) {
           this.state = {
             ...this.state,
-            pendingMessageCount: event.steering.length + event.followUp.length,
+            pendingMessageCount:
+              event.steering.length + event.followUp.length,
           };
         }
         break;
@@ -227,20 +306,21 @@ export class AgentService {
   }
 
   private sendRaw(data: unknown): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error("Not connected to external agent");
+    if (!this.process || !this.process.stdin || this.process.stdin.destroyed) {
+      throw new Error("Agent process not running");
     }
-    this.ws.send(JSON.stringify(data));
+    this.process.stdin.write(JSON.stringify(data) + "\n");
   }
 
   dispose(): void {
+    this.isDisposed = true;
     this.callbacks.clear();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    this.ws?.close();
-    this.ws = null;
+    this.process?.kill();
+    this.process = null;
     this.connected = false;
     this.state = null;
     this.messages = [];

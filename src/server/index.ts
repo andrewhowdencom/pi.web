@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface ServerOptions {
   port?: number;
-  agentUrl: string;
+  cwd?: string;
   staticDir?: string;
 }
 
@@ -25,9 +25,11 @@ export async function startServer(
   const staticDir =
     options.staticDir || path.resolve(__dirname, "../../dist/client");
 
+  const cwd = options.cwd || process.cwd();
+
   // Initialize agent
   const agent = new AgentService();
-  await agent.initialize(options.agentUrl);
+  await agent.initialize(cwd);
 
   // Create Express app
   const app = express();
