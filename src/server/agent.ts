@@ -191,13 +191,29 @@ export class AgentService {
     }
 
     switch (msg.command) {
-      case "get_state":
-        this.state = msg.data;
+      case "get_state": {
+        const rawState = msg.data;
+        if (rawState) {
+          rawState.model = this.normalizeModel(rawState.model);
+        }
+        this.state = rawState;
         break;
+      }
       case "get_messages":
         this.messages = msg.data?.messages ?? [];
         break;
     }
+  }
+
+  private normalizeModel(model: unknown): string | null {
+    if (model === null || model === undefined) return null;
+    if (typeof model === "string") return model;
+    if (typeof model === "object" && model !== null) {
+      const m = model as Record<string, unknown>;
+      const candidate = m.model ?? m.modelId ?? m.id ?? m.name;
+      if (typeof candidate === "string") return candidate;
+    }
+    return null;
   }
 
   private broadcast(event: AgentEvent): void {
