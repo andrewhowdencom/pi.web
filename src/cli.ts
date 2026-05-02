@@ -5,7 +5,7 @@ async function main() {
   const args = process.argv.slice(2);
   let port: number | undefined;
   let noOpen = false;
-  let cwd = process.cwd();
+  let agentUrl: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -17,8 +17,8 @@ async function main() {
       case "--no-open":
         noOpen = true;
         break;
-      case "--cwd":
-        cwd = args[++i];
+      case "--agent-url":
+        agentUrl = args[++i];
         break;
       case "--help":
       case "-h":
@@ -27,16 +27,26 @@ async function main() {
 Options:
   --port, -p <number>  Server port (default: 3142)
   --no-open            Don't open browser automatically
-  --cwd <path>         Working directory for the agent
+  --agent-url <url>    WebSocket URL of the external pi agent (e.g. ws://localhost:3141)
   --help, -h           Show this help message
 `);
         process.exit(0);
     }
   }
 
+  if (!agentUrl) {
+    console.error("Error: --agent-url is required. Specify the WebSocket URL of the external pi agent.");
+    process.exit(1);
+  }
+
+  if (!agentUrl.startsWith("ws://") && !agentUrl.startsWith("wss://")) {
+    console.error("Error: --agent-url must start with ws:// or wss://");
+    process.exit(1);
+  }
+
   const { httpServer, agent, port: actualPort } = await startServer({
     port,
-    cwd,
+    agentUrl,
   });
 
   if (!noOpen) {

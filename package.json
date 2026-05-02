@@ -7,13 +7,12 @@
     "pi-web": "dist/server/cli.js"
   },
   "scripts": {
-    "dev": "VITE_WS_URL=ws://localhost:3142 concurrently -k \"vite\" \"tsx src/cli.ts --port 3142 --no-open\"",
+    "dev": "VITE_WS_URL=ws://localhost:3142 concurrently -k \"vite\" \"tsx src/cli.ts --port 3142 --agent-url ws://localhost:3141 --no-open\"",
     "build": "tsc --project tsconfig.server.json && vite build",
     "start": "node dist/server/cli.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@mariozechner/pi-coding-agent": "^0.72.1",
     "express": "^4.21.0",
     "open": "^10.1.0",
     "react": "^18.3.1",
