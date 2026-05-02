@@ -53,7 +53,8 @@ export class AgentService {
 
       console.log(`Spawning pi agent in ${this.cwd}`);
 
-      this.process = spawn("pi", ["--mode", "rpc", "--cwd", this.cwd], {
+      this.process = spawn("pi", ["--mode", "rpc"], {
+        cwd: this.cwd,
         stdio: ["pipe", "pipe", "pipe"],
       });
 
