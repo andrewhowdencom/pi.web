@@ -4,12 +4,12 @@
   "description": "Web-based UI for the pi coding agent",
   "type": "module",
   "bin": {
-    "pi-web": "dist/server/cli.js"
+    "pi-web": "dist/cli.js"
   },
   "scripts": {
     "dev": "VITE_WS_URL=ws://localhost:3142 concurrently -k \"vite\" \"tsx src/cli.ts --port 3142 --no-open\"",
     "build": "tsc --project tsconfig.server.json && vite build",
-    "start": "node dist/server/cli.js",
+    "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
