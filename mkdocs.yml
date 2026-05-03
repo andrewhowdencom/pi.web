@@ -1,6 +1,9 @@
 site_name: Pi Web
 docs_dir: docs
 
+nav:
+  - Home: index.md
+
 site_url: https://andrewhowdencom.github.io/pi/web/
 repo_url: https://github.com/andrewhowdencom/pi.web
 edit_uri: edit/main/docs/
