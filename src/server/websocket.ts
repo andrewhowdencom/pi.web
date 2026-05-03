@@ -129,6 +129,11 @@ async function handleCommand(
         sendError(ws, cmd.id, "compact", "compact not yet implemented");
         break;
       }
+      case "extension_ui_response": {
+        agent.sendExtensionUIResponse(cmd);
+        sendSuccess(ws, cmd.id, "extension_ui_response");
+        break;
+      }
       default: {
         sendError(
           ws,

@@ -16,7 +16,12 @@ export type AgentEvent =
   | ToolExecutionEvent
   | QueueEvent
   | CompactionEvent
-  | AutoRetryEvent;
+  | AutoRetryEvent
+  | ExtensionUIEvent;
+
+export type ExtensionUIEvent = {
+  type: "extension_ui_request";
+} & ExtensionUIRequest;
 
 export type AgentLifecycleEvent =
   | { type: "agent_start" }
@@ -60,3 +65,83 @@ export type CompactionEvent =
 export type AutoRetryEvent =
   | { type: "auto_retry_start"; attempt: number; maxAttempts: number; delayMs: number; errorMessage: string }
   | { type: "auto_retry_end"; success: boolean; attempt: number; finalError?: string };
+
+export type ExtensionUIRequest =
+  | ExtensionUISelectRequest
+  | ExtensionUIConfirmRequest
+  | ExtensionUIInputRequest
+  | ExtensionUIEditorRequest
+  | ExtensionUINotifyRequest
+  | ExtensionUISetStatusRequest
+  | ExtensionUISetWidgetRequest
+  | ExtensionUISetTitleRequest
+  | ExtensionUISetEditorTextRequest;
+
+export interface ExtensionUISelectRequest {
+  method: "select";
+  id: string;
+  title: string;
+  message?: string;
+  options: string[];
+  timeout?: number;
+}
+
+export interface ExtensionUIConfirmRequest {
+  method: "confirm";
+  id: string;
+  title: string;
+  message?: string;
+  timeout?: number;
+}
+
+export interface ExtensionUIInputRequest {
+  method: "input";
+  id: string;
+  title: string;
+  message?: string;
+  placeholder?: string;
+  timeout?: number;
+}
+
+export interface ExtensionUIEditorRequest {
+  method: "editor";
+  id: string;
+  title: string;
+  message?: string;
+  prefill?: string;
+  timeout?: number;
+}
+
+export interface ExtensionUINotifyRequest {
+  method: "notify";
+  id: string;
+  message: string;
+  notifyType?: "info" | "warning" | "error";
+}
+
+export interface ExtensionUISetStatusRequest {
+  method: "setStatus";
+  id: string;
+  statusKey: string;
+  statusText?: string;
+}
+
+export interface ExtensionUISetWidgetRequest {
+  method: "setWidget";
+  id: string;
+  widgetKey: string;
+  widgetLines?: string[];
+  widgetPlacement?: "aboveEditor" | "belowEditor";
+}
+
+export interface ExtensionUISetTitleRequest {
+  method: "setTitle";
+  id: string;
+  title: string;
+}
+
+export interface ExtensionUISetEditorTextRequest {
+  method: "set_editor_text";
+  id: string;
+  text: string;
+}

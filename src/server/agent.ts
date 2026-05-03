@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "child_process";
 import { StringDecoder } from "string_decoder";
 import type { AgentEvent } from "../shared/events.js";
-import type { AgentStateSnapshot, RpcCommand } from "../shared/protocol.js";
+import type { AgentStateSnapshot, ExtensionUIResponseCommand, RpcCommand } from "../shared/protocol.js";
 import { debug, error as logError } from "../shared/logger.js";
 
 export type EventCallback = (event: AgentEvent) => void;
@@ -313,6 +313,10 @@ export class AgentService {
 
   setThinkingLevel(level: string): void {
     this.sendCommand({ type: "set_thinking_level", level });
+  }
+
+  sendExtensionUIResponse(response: ExtensionUIResponseCommand): void {
+    this.sendRaw(response);
   }
 
   private sendCommand(cmd: RpcCommand): void {

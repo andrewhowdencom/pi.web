@@ -254,3 +254,167 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* Extension UI Dialog */
+.extension-ui-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.extension-ui-dialog {
+  background: #16213e;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.extension-ui-dialog-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.extension-ui-dialog-message {
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.extension-ui-dialog-timeout {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #888;
+}
+
+.extension-ui-dialog-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.extension-ui-dialog-options button {
+  background: #0f0f23;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #e0e0e0;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+}
+
+.extension-ui-dialog-options button:hover {
+  background: #1a1a2e;
+  border-color: #666;
+}
+
+.extension-ui-dialog-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.extension-ui-dialog-buttons button {
+  background: #4a4a6a;
+  border: none;
+  border-radius: 8px;
+  color: #e0e0e0;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.extension-ui-dialog-buttons button:hover:not(:disabled) {
+  background: #5a5a7a;
+}
+
+.extension-ui-dialog-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.extension-ui-input {
+  width: 100%;
+  background: #0f0f23;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.extension-ui-textarea {
+  width: 100%;
+  background: #0f0f23;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  min-height: 120px;
+  resize: vertical;
+  margin-bottom: 16px;
+}
+
+/* Extension UI Notifications */
+.extension-ui-notifications {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1001;
+  max-width: 360px;
+}
+
+.extension-ui-notification {
+  background: #16213e;
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.extension-ui-notification.info {
+  border-color: #3498db;
+}
+
+.extension-ui-notification.warning {
+  border-color: #f39c12;
+}
+
+.extension-ui-notification.error {
+  border-color: #c0392b;
+}
+
+.extension-ui-notification-message {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.extension-ui-notification-dismiss {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+}

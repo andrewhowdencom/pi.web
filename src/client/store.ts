@@ -1,13 +1,22 @@
 import { useState, useEffect } from "react";
-import type { AgentStateSnapshot, RpcCommand } from "../shared/protocol.js";
-import type { AgentEvent, ServerMessage } from "../shared/events.js";
+import type { AgentStateSnapshot, ExtensionUIResponseCommand, RpcCommand } from "../shared/protocol.js";
+import type { AgentEvent, ExtensionUIRequest, ServerMessage } from "../shared/events.js";
 import { createWebSocketClient, type WebSocketClient } from "./websocket.js";
+
+export interface UINotification {
+  id: string;
+  type: "info" | "warning" | "error";
+  message: string;
+  timestamp: number;
+}
 
 export interface AppState {
   connected: boolean;
   messages: unknown[];
   isStreaming: boolean;
   agentState: AgentStateSnapshot | null;
+  pendingUIRequests: ExtensionUIRequest[];
+  notifications: UINotification[];
 }
 
 const initialState: AppState = {
@@ -15,6 +24,8 @@ const initialState: AppState = {
   messages: [],
   isStreaming: false,
   agentState: null,
+  pendingUIRequests: [],
+  notifications: [],
 };
 
 class AgentStore {
@@ -66,6 +77,36 @@ class AgentStore {
 
   sendAbort(): void {
     this.sendCommand({ type: "abort" });
+  }
+
+  sendExtensionUIResponse(
+    id: string,
+    response: { value?: string; confirmed?: boolean; cancelled?: boolean }
+  ): void {
+    const request = this.state.pendingUIRequests.find((r) => r.id === id);
+    if (!request) {
+      console.warn("No pending UI request found for id:", id);
+      return;
+    }
+
+    const cmd: ExtensionUIResponseCommand = {
+      type: "extension_ui_response",
+      id,
+      ...response,
+    };
+
+    this.sendCommand(cmd);
+    this.setState({
+      ...this.state,
+      pendingUIRequests: this.state.pendingUIRequests.filter((r) => r.id !== id),
+    });
+  }
+
+  dismissNotification(id: string): void {
+    this.setState({
+      ...this.state,
+      notifications: this.state.notifications.filter((n) => n.id !== id),
+    });
   }
 
   getState(): AppState {
@@ -151,8 +192,87 @@ class AgentStore {
             : null,
         });
         break;
-      default:
+      case "extension_ui_request": {
+        switch (event.method) {
+          case "select":
+          case "confirm":
+          case "input":
+          case "editor": {
+            this.setState({
+              ...this.state,
+              pendingUIRequests: [...this.state.pendingUIRequests, event],
+            });
+            break;
+          }
+          case "notify": {
+            const notification: UINotification = {
+              id: event.id,
+              type: event.notifyType ?? "info",
+              message: event.message,
+              timestamp: Date.now(),
+            };
+            this.setState({
+              ...this.state,
+              notifications: [...this.state.notifications, notification],
+            });
+            break;
+          }
+          case "setStatus": {
+            const notification: UINotification = {
+              id: event.id,
+              type: "info",
+              message: `Status [${event.statusKey}]: ${event.statusText ?? "(cleared)"}`,
+              timestamp: Date.now(),
+            };
+            this.setState({
+              ...this.state,
+              notifications: [...this.state.notifications, notification],
+            });
+            break;
+          }
+          case "setWidget":
+          case "setTitle":
+          case "set_editor_text": {
+            console.log(`Extension UI ${event.method}:`, event);
+            break;
+          }
+          default: {
+            const cmd: ExtensionUIResponseCommand = {
+              type: "extension_ui_response",
+              id: (event as any).id,
+              cancelled: true,
+            };
+            this.sendCommand(cmd);
+            const notification: UINotification = {
+              id: (event as any).id,
+              type: "warning",
+              message: `Web UI received an unsupported extension UI method '${(event as any).method}'. The agent has been notified with a cancellation response.`,
+              timestamp: Date.now(),
+            };
+            this.setState({
+              ...this.state,
+              notifications: [...this.state.notifications, notification],
+            });
+            console.warn("Unknown extension_ui_request method:", event);
+            break;
+          }
+        }
         break;
+      }
+      default: {
+        const notification: UINotification = {
+          id: `unknown-${Date.now()}`,
+          type: "warning",
+          message: `Web UI received an unsupported event type '${event.type}'. No response was sent to the agent — this event was informational only.`,
+          timestamp: Date.now(),
+        };
+        this.setState({
+          ...this.state,
+          notifications: [...this.state.notifications, notification],
+        });
+        console.warn("Unknown event type:", event);
+        break;
+      }
     }
   }
 }
@@ -180,5 +300,8 @@ export function useAgent() {
     sendPrompt: (msg: string) => store.sendPrompt(msg),
     sendSteer: (msg: string) => store.sendSteer(msg),
     sendAbort: () => store.sendAbort(),
+    sendExtensionUIResponse: (id: string, response: { value?: string; confirmed?: boolean; cancelled?: boolean }) =>
+      store.sendExtensionUIResponse(id, response),
+    dismissNotification: (id: string) => store.dismissNotification(id),
   };
 }

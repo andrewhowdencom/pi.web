@@ -13,7 +13,8 @@ export type RpcCommand =
   | SetModelCommand
   | SetThinkingLevelCommand
   | NewSessionCommand
-  | CompactCommand;
+  | CompactCommand
+  | ExtensionUIResponseCommand;
 
 export interface PromptCommand {
   id?: string;
@@ -71,6 +72,14 @@ export interface CompactCommand {
   id?: string;
   type: "compact";
   customInstructions?: string;
+}
+
+export interface ExtensionUIResponseCommand {
+  type: "extension_ui_response";
+  id: string;
+  value?: string;
+  confirmed?: boolean;
+  cancelled?: boolean;
 }
 
 // ============ Server -> Client Responses ============
