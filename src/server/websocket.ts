@@ -7,7 +7,7 @@ import type {
   AgentStateSnapshot,
 } from "../shared/protocol.js";
 import type { AgentEvent } from "../shared/events.js";
-import { debug, error as logError } from "../shared/logger.js";
+import { debug, error as logError, info } from "../shared/logger.js";
 
 export function createWebSocketBridge(
   httpServer: Server,
@@ -20,6 +20,7 @@ export function createWebSocketBridge(
   const unsubscribe = agent.onEvent((sdkEvent) => {
     try {
       const event = sdkEvent as AgentEvent;
+      info("Broadcasting event:", event.type);
       const payload = JSON.stringify({ type: "event", event });
       for (const client of clients) {
         if (client.readyState === WebSocket.OPEN) {

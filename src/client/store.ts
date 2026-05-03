@@ -150,6 +150,8 @@ class AgentStore {
       case "agent_end":
         this.setState({ ...this.state, isStreaming: false });
         break;
+      case "turn_start":
+        break;
       case "message_start": {
         const messages = [...this.state.messages, event.message];
         this.setState({ ...this.state, messages });
@@ -181,6 +183,29 @@ class AgentStore {
         this.setState({ ...this.state, messages });
         break;
       }
+      case "tool_execution_start":
+      case "tool_execution_update":
+      case "tool_execution_end":
+        break;
+      case "compaction_start":
+        this.setState({
+          ...this.state,
+          agentState: this.state.agentState
+            ? { ...this.state.agentState, isCompacting: true }
+            : null,
+        });
+        break;
+      case "compaction_end":
+        this.setState({
+          ...this.state,
+          agentState: this.state.agentState
+            ? { ...this.state.agentState, isCompacting: false }
+            : null,
+        });
+        break;
+      case "auto_retry_start":
+      case "auto_retry_end":
+        break;
       case "queue_update":
         this.setState({
           ...this.state,
@@ -264,7 +289,7 @@ class AgentStore {
         const notification: UINotification = {
           id: `unknown-${Date.now()}`,
           type: "warning",
-          message: `Web UI received an unsupported event type '${event.type}'. No response was sent to the agent — this event was informational only.`,
+          message: `Web UI received an unsupported event type '${(event as any).type}'. No response was sent to the agent — this event was informational only.`,
           timestamp: Date.now(),
         };
         this.setState({
