@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { AgentService } from "./agent.js";
 import { createWebSocketBridge } from "./websocket.js";
+import { info } from "../shared/logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,7 +53,7 @@ export async function startServer(
   // Start listening
   await new Promise<void>((resolve, reject) => {
     httpServer.listen(port, () => {
-      console.log(`pi-web server running on http://localhost:${port}`);
+      info(`pi-web server running on http://localhost:${port}`);
       resolve();
     });
     httpServer.on("error", reject);

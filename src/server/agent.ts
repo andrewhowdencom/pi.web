@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from "child_process";
 import { StringDecoder } from "string_decoder";
 import type { AgentEvent } from "../shared/events.js";
 import type { AgentStateSnapshot, RpcCommand } from "../shared/protocol.js";
+import { debug, error as logError } from "../shared/logger.js";
 
 export type EventCallback = (event: AgentEvent) => void;
 
@@ -155,11 +156,12 @@ export class AgentService {
 
   private processLine(line: string): void {
     if (line.length === 0) return;
+    debug("Agent raw line:", line);
     try {
       const msg = JSON.parse(line);
       this.handleMessage(msg);
     } catch (err) {
-      console.error("Failed to parse agent JSONL:", err, "Line:", line);
+      logError("Failed to parse agent JSONL:", err, "Line:", line);
     }
   }
 
@@ -175,8 +177,9 @@ export class AgentService {
   }
 
   private handleResponse(msg: any): void {
+    debug("Agent response:", msg);
     if (!msg.success) {
-      console.error(
+      logError(
         `Agent command '${msg.command ?? "unknown"}' failed:`,
         msg.error
       );
@@ -210,11 +213,12 @@ export class AgentService {
   }
 
   private broadcast(event: AgentEvent): void {
+    debug("Agent event:", event);
     for (const cb of this.callbacks) {
       try {
         cb(event);
       } catch (err) {
-        console.error("Event callback error:", err);
+        logError("Event callback error:", err);
       }
     }
   }
@@ -319,7 +323,9 @@ export class AgentService {
     if (!this.process || !this.process.stdin || this.process.stdin.destroyed) {
       throw new Error("Agent process not running");
     }
-    this.process.stdin.write(JSON.stringify(data) + "\n");
+    const payload = JSON.stringify(data) + "\n";
+    debug("Agent request:", data);
+    this.process.stdin.write(payload);
   }
 
   dispose(): void {

@@ -7,6 +7,7 @@ import type {
   AgentStateSnapshot,
 } from "../shared/protocol.js";
 import type { AgentEvent } from "../shared/events.js";
+import { debug, error as logError } from "../shared/logger.js";
 
 export function createWebSocketBridge(
   httpServer: Server,
@@ -44,9 +45,10 @@ export function createWebSocketBridge(
     ws.on("message", async (rawData) => {
       try {
         const cmd = JSON.parse(rawData.toString()) as RpcCommand;
+        debug("WebSocket command:", cmd);
         await handleCommand(ws, cmd, agent);
       } catch (err) {
-        console.error("WebSocket message error:", err);
+        logError("WebSocket message error:", err);
         sendError(ws, undefined, "parse", String(err));
       }
     });
@@ -56,7 +58,7 @@ export function createWebSocketBridge(
     });
 
     ws.on("error", (err) => {
-      console.error("WebSocket client error:", err);
+      logError("WebSocket client error:", err);
       clients.delete(ws);
     });
   });
@@ -138,7 +140,7 @@ async function handleCommand(
       }
     }
   } catch (err) {
-    console.error(`Command ${cmd.type} error:`, err);
+    logError(`Command ${cmd.type} error:`, err);
     sendError(ws, cmd.id, cmd.type, String(err));
   }
 }
@@ -156,6 +158,7 @@ function sendSuccess(
     success: true,
     ...(data !== undefined ? { data } : {}),
   };
+  debug("WebSocket response:", response);
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(response));
   }
@@ -174,6 +177,7 @@ function sendError(
     success: false,
     error,
   };
+  debug("WebSocket response:", response);
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(response));
   }
