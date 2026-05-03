@@ -113,10 +113,6 @@ export class AgentService {
       this.connected = true;
       hasResolved = true;
 
-      // Request initial sync to populate caches
-      this.sendRaw({ type: "get_state" });
-      this.sendRaw({ type: "get_messages" });
-
       resolve();
     });
   }
@@ -168,17 +164,14 @@ export class AgentService {
   }
 
   private handleMessage(msg: any): void {
-    switch (msg.type) {
-      case "event":
-        this.broadcast(msg.event);
-        this.updateFromEvent(msg.event);
-        break;
-      case "response":
-        this.handleResponse(msg);
-        break;
-      default:
-        console.warn("Unknown message type from agent:", msg.type);
+    if (msg.type === "response") {
+      this.handleResponse(msg);
+      return;
     }
+
+    // pi --mode rpc sends bare events (not wrapped in {type: "event"})
+    this.broadcast(msg);
+    this.updateFromEvent(msg);
   }
 
   private handleResponse(msg: any): void {
