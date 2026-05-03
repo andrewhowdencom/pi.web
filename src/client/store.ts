@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { AgentStateSnapshot, ExtensionUIResponseCommand, RpcCommand } from "../shared/protocol.js";
 import type { AgentEvent, ExtensionUIRequest, ServerMessage } from "../shared/events.js";
+import { warn } from "../shared/logger.js";
 import { createWebSocketClient, type WebSocketClient } from "./websocket.js";
 
 export interface UINotification {
@@ -253,7 +254,7 @@ class AgentStore {
               ...this.state,
               notifications: [...this.state.notifications, notification],
             });
-            console.warn("Unknown extension_ui_request method:", event);
+            warn("Unknown extension_ui_request method:", event);
             break;
           }
         }
@@ -270,7 +271,7 @@ class AgentStore {
           ...this.state,
           notifications: [...this.state.notifications, notification],
         });
-        console.warn("Unknown event type:", event);
+        warn("Unknown event type:", event);
         break;
       }
     }
