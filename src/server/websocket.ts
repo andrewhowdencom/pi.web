@@ -27,8 +27,17 @@ export function createWebSocketBridge(
           client.send(payload);
         }
       }
+
+      // Broadcast the current state snapshot so all clients stay in sync
+      const state = agent.getState();
+      const statePayload = JSON.stringify({ type: "state", state });
+      for (const client of clients) {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(statePayload);
+        }
+      }
     } catch (err) {
-      console.error("Failed to serialize/broadcast event:", err);
+      console.error("Failed to serialize/broadcast event or state:", err);
     }
   });
 

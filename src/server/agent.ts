@@ -227,8 +227,21 @@ export class AgentService {
 
   private updateFromEvent(event: AgentEvent): void {
     switch (event.type) {
+      case "agent_start": {
+        if (this.state) {
+          this.state = { ...this.state, isStreaming: true };
+        }
+        break;
+      }
       case "agent_end": {
         this.messages = event.messages;
+        if (this.state) {
+          this.state = {
+            ...this.state,
+            isStreaming: false,
+            messageCount: this.messages.length,
+          };
+        }
         break;
       }
       case "message_start": {
@@ -262,6 +275,18 @@ export class AgentService {
             pendingMessageCount:
               event.steering.length + event.followUp.length,
           };
+        }
+        break;
+      }
+      case "compaction_start": {
+        if (this.state) {
+          this.state = { ...this.state, isCompacting: true };
+        }
+        break;
+      }
+      case "compaction_end": {
+        if (this.state) {
+          this.state = { ...this.state, isCompacting: false };
         }
         break;
       }
