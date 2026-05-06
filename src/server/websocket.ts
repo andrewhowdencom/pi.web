@@ -123,11 +123,13 @@ async function handleCommand(
         break;
       }
       case "new_session": {
-        sendError(ws, cmd.id, "new_session", "new_session not yet implemented");
+        await agent.newSession();
+        sendSuccess(ws, cmd.id, "new_session");
         break;
       }
       case "compact": {
-        sendError(ws, cmd.id, "compact", "compact not yet implemented");
+        await agent.compact(cmd.customInstructions);
+        sendSuccess(ws, cmd.id, "compact");
         break;
       }
       case "extension_ui_response": {

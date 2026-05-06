@@ -6,6 +6,7 @@ interface InputAreaProps {
   onSend: (message: string) => void;
   onSteer: (message: string) => void;
   onAbort: () => void;
+  onSlashCommand: (text: string) => boolean;
 }
 
 export function InputArea({
@@ -14,31 +15,40 @@ export function InputArea({
   onSend,
   onSteer,
   onAbort,
+  onSlashCommand,
 }: InputAreaProps) {
   const [text, setText] = useState("");
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (text.trim()) {
-        if (isStreaming) {
-          onSteer(text.trim());
+      const trimmed = text.trim();
+      if (trimmed) {
+        if (onSlashCommand(trimmed)) {
+          setText("");
+        } else if (isStreaming) {
+          onSteer(trimmed);
+          setText("");
         } else {
-          onSend(text.trim());
+          onSend(trimmed);
+          setText("");
         }
-        setText("");
       }
     }
   };
 
   const handleSend = () => {
-    if (text.trim()) {
-      if (isStreaming) {
-        onSteer(text.trim());
+    const trimmed = text.trim();
+    if (trimmed) {
+      if (onSlashCommand(trimmed)) {
+        setText("");
+      } else if (isStreaming) {
+        onSteer(trimmed);
+        setText("");
       } else {
-        onSend(text.trim());
+        onSend(trimmed);
+        setText("");
       }
-      setText("");
     }
   };
 

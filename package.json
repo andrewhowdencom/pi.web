@@ -10,7 +10,8 @@
     "dev": "VITE_WS_URL=ws://localhost:3142 concurrently -k \"vite\" \"tsx src/cli.ts --port 3142 --no-open\"",
     "build": "tsc --project tsconfig.server.json && vite build",
     "start": "node dist/cli.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "express": "^4.21.0",
@@ -29,6 +30,7 @@
     "concurrently": "^9.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3",
-    "vite": "^5.4.0"
+    "vite": "^5.4.0",
+    "vitest": "^4.1.5"
   }
 }

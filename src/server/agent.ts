@@ -307,6 +307,14 @@ export class AgentService {
     this.sendCommand({ type: "abort" });
   }
 
+  async newSession(): Promise<void> {
+    this.sendCommand({ type: "new_session" });
+  }
+
+  async compact(customInstructions?: string): Promise<void> {
+    this.sendCommand({ type: "compact", customInstructions });
+  }
+
   async setModel(provider: string, modelId: string): Promise<void> {
     this.sendCommand({ type: "set_model", provider, modelId });
   }

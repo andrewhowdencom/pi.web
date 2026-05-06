@@ -47,6 +47,7 @@ export default function App() {
           onSend={agent.sendPrompt}
           onSteer={agent.sendSteer}
           onAbort={agent.sendAbort}
+          onSlashCommand={agent.sendSlashCommand}
         />
       </footer>
     </div>

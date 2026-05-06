@@ -3,6 +3,7 @@ import type { AgentStateSnapshot, ExtensionUIResponseCommand, RpcCommand } from 
 import type { AgentEvent, ExtensionUIRequest, ServerMessage } from "../shared/events.js";
 import { warn } from "../shared/logger.js";
 import { createWebSocketClient, type WebSocketClient } from "./websocket.js";
+import { parseSlashCommand } from "./slash-commands.js";
 
 export interface UINotification {
   id: string;
@@ -78,6 +79,48 @@ class AgentStore {
 
   sendAbort(): void {
     this.sendCommand({ type: "abort" });
+  }
+
+  sendNewSession(): void {
+    this.sendCommand({ type: "new_session" });
+  }
+
+  sendCompact(customInstructions?: string): void {
+    this.sendCommand({ type: "compact", customInstructions });
+  }
+
+  sendGetState(): void {
+    this.sendCommand({ type: "get_state" });
+  }
+
+  sendGetMessages(): void {
+    this.sendCommand({ type: "get_messages" });
+  }
+
+  sendSlashCommand(text: string): boolean {
+    const action = parseSlashCommand(text);
+    if (action === null) {
+      return false;
+    }
+
+    switch (action.type) {
+      case "new_session":
+        this.sendNewSession();
+        break;
+      case "compact":
+        this.sendCompact(action.customInstructions);
+        break;
+      case "abort":
+        this.sendAbort();
+        break;
+      case "get_state":
+        this.sendGetState();
+        break;
+      case "get_messages":
+        this.sendGetMessages();
+        break;
+    }
+    return true;
   }
 
   sendExtensionUIResponse(
@@ -326,6 +369,7 @@ export function useAgent() {
     sendPrompt: (msg: string) => store.sendPrompt(msg),
     sendSteer: (msg: string) => store.sendSteer(msg),
     sendAbort: () => store.sendAbort(),
+    sendSlashCommand: (msg: string) => store.sendSlashCommand(msg),
     sendExtensionUIResponse: (id: string, response: { value?: string; confirmed?: boolean; cancelled?: boolean }) =>
       store.sendExtensionUIResponse(id, response),
     dismissNotification: (id: string) => store.dismissNotification(id),
