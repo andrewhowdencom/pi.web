@@ -8,6 +8,7 @@ async function main() {
   let noOpen = false;
   let cwd = process.cwd();
   let logLevel: LogLevel | undefined;
+  let host: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -25,12 +26,16 @@ async function main() {
       case "--log-level":
         logLevel = args[++i] as LogLevel;
         break;
+      case "--host":
+        host = args[++i];
+        break;
       case "--help":
       case "-h":
         console.log(`Usage: pi-web [options]
 
 Options:
   --port, -p <number>  Server port (default: 3142)
+  --host <address>     Server host (default: all interfaces)
   --no-open            Don't open browser automatically
   --cwd <path>         Working directory for the pi agent (default: current directory)
   --log-level <level>  Logging level: debug, info, warn, error (default: info)
@@ -50,11 +55,12 @@ Options:
   const { httpServer, agent, port: actualPort } = await startServer({
     port,
     cwd,
+    host,
   });
 
   if (!noOpen) {
     try {
-      await open(`http://localhost:${actualPort}`);
+      await open(`http://${host || "localhost"}:${actualPort}`);
     } catch (err) {
       console.error("Failed to open browser:", err);
     }

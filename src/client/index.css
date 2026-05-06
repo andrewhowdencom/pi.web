@@ -8,17 +8,20 @@ body {
   background: #1a1a2e;
   color: #e0e0e0;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
 #root {
   height: 100vh;
+  height: 100dvh;
 }
 
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
 }
 
 .app-header {
