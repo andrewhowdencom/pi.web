@@ -21,6 +21,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.0.0",
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.12",
@@ -28,6 +29,7 @@
     "@types/ws": "^8.5.12",
     "@vitejs/plugin-react": "^4.3.3",
     "concurrently": "^9.0.0",
+    "jsdom": "^25.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.0",

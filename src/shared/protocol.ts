@@ -115,6 +115,7 @@ export interface AgentStateSnapshot {
   autoCompactionEnabled: boolean;
   messageCount: number;
   pendingMessageCount: number;
+  workingDirectory: string | null;
 }
 
 // ============ Client Types ============

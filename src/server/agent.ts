@@ -21,6 +21,7 @@ const DEFAULT_STATE: AgentStateSnapshot = {
   autoCompactionEnabled: true,
   messageCount: 0,
   pendingMessageCount: 0,
+  workingDirectory: null,
 };
 
 export class AgentService {
@@ -191,6 +192,7 @@ export class AgentService {
         const rawState = msg.data;
         if (rawState) {
           rawState.model = this.normalizeModel(rawState.model);
+          rawState.workingDirectory = this.cwd;
         }
         this.state = rawState;
         break;

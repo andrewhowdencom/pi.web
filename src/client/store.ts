@@ -19,6 +19,8 @@ export interface AppState {
   agentState: AgentStateSnapshot | null;
   pendingUIRequests: ExtensionUIRequest[];
   notifications: UINotification[];
+  statuses: Record<string, string>;
+  activeToolCalls: Map<string, string>;
 }
 
 const initialState: AppState = {
@@ -28,9 +30,11 @@ const initialState: AppState = {
   agentState: null,
   pendingUIRequests: [],
   notifications: [],
+  statuses: {},
+  activeToolCalls: new Map(),
 };
 
-class AgentStore {
+export class AgentStore {
   private client: WebSocketClient;
   private state: AppState = initialState;
   private listeners: Set<(state: AppState) => void> = new Set();
@@ -226,10 +230,20 @@ class AgentStore {
         this.setState({ ...this.state, messages });
         break;
       }
-      case "tool_execution_start":
-      case "tool_execution_update":
-      case "tool_execution_end":
+      case "tool_execution_start": {
+        const nextActive = new Map(this.state.activeToolCalls);
+        nextActive.set(event.toolCallId, event.toolName);
+        this.setState({ ...this.state, activeToolCalls: nextActive });
         break;
+      }
+      case "tool_execution_update":
+        break;
+      case "tool_execution_end": {
+        const nextActive = new Map(this.state.activeToolCalls);
+        nextActive.delete(event.toolCallId);
+        this.setState({ ...this.state, activeToolCalls: nextActive });
+        break;
+      }
       case "compaction_start":
         this.setState({
           ...this.state,
@@ -287,15 +301,15 @@ class AgentStore {
             break;
           }
           case "setStatus": {
-            const notification: UINotification = {
-              id: event.id,
-              type: "info",
-              message: `Status [${event.statusKey}]: ${event.statusText ?? "(cleared)"}`,
-              timestamp: Date.now(),
-            };
+            const nextStatuses = { ...this.state.statuses };
+            if (event.statusText) {
+              nextStatuses[event.statusKey] = event.statusText;
+            } else {
+              delete nextStatuses[event.statusKey];
+            }
             this.setState({
               ...this.state,
-              notifications: [...this.state.notifications, notification],
+              statuses: nextStatuses,
             });
             break;
           }
