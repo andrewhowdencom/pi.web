@@ -4,6 +4,8 @@ import type { AgentEvent, ExtensionUIRequest, ServerMessage } from "../shared/ev
 import { warn } from "../shared/logger.js";
 import { createWebSocketClient, type WebSocketClient } from "./websocket.js";
 import { parseSlashCommand } from "./slash-commands.js";
+import { loadMessages, saveMessages, clearMessages } from "./session-storage.js";
+import type { PersistedMessages } from "./session-storage.js";
 
 export interface UINotification {
   id: string;
@@ -41,6 +43,26 @@ export class AgentStore {
   private unsubMessage: (() => void) | null = null;
   private unsubOpen: (() => void) | null = null;
   private unsubClose: (() => void) | null = null;
+  private pendingRestore: PersistedMessages | null = null;
+  private handleVisibilityChange = (): void => {
+    if (document.visibilityState === "visible") {
+      if (!this.client.isOpen) {
+        this.client.eagerReconnect();
+      }
+      this.sendGetState();
+      this.sendGetMessages();
+    }
+  };
+
+  private handleFreeze = (): void => {
+    if (this.state.agentState?.sessionId) {
+      saveMessages(this.state.agentState.sessionId, this.state.messages);
+    }
+  };
+
+  private handleResume = (): void => {
+    this.handleVisibilityChange();
+  };
 
   constructor(url?: string) {
     this.client = createWebSocketClient(url);
@@ -56,6 +78,15 @@ export class AgentStore {
     this.unsubMessage = this.client.onMessage((msg) => {
       this.handleServerMessage(msg);
     });
+
+    const restored = loadMessages();
+    if (restored) {
+      this.state = { ...this.state, messages: restored.messages };
+      this.pendingRestore = restored;
+    }
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    document.addEventListener("freeze", this.handleFreeze);
+    document.addEventListener("resume", this.handleResume);
   }
 
   connect(): void {
@@ -66,6 +97,9 @@ export class AgentStore {
     this.unsubMessage?.();
     this.unsubOpen?.();
     this.unsubClose?.();
+    document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    document.removeEventListener("freeze", this.handleFreeze);
+    document.removeEventListener("resume", this.handleResume);
     this.client.disconnect();
   }
 
@@ -86,6 +120,7 @@ export class AgentStore {
   }
 
   sendNewSession(): void {
+    clearMessages();
     this.sendCommand({ type: "new_session" });
   }
 
@@ -175,14 +210,27 @@ export class AgentStore {
     }
   }
 
+  private persistMessages(): void {
+    if (this.state.agentState?.sessionId) {
+      saveMessages(this.state.agentState.sessionId, this.state.messages);
+    }
+  }
+
   private handleServerMessage(msg: ServerMessage): void {
     switch (msg.type) {
       case "event":
         this.handleEvent(msg.event);
         break;
-      case "state":
-        this.setState({ ...this.state, agentState: msg.state });
+      case "state": {
+        let nextMessages = this.state.messages;
+        if (this.pendingRestore && msg.state.sessionId !== this.pendingRestore.sessionId) {
+          clearMessages();
+          nextMessages = [];
+        }
+        this.pendingRestore = null;
+        this.setState({ ...this.state, agentState: msg.state, messages: nextMessages });
         break;
+      }
       case "response":
         console.log("Response:", msg);
         break;
@@ -202,6 +250,7 @@ export class AgentStore {
       case "message_start": {
         const messages = [...this.state.messages, event.message];
         this.setState({ ...this.state, messages });
+        this.persistMessages();
         break;
       }
       case "message_update": {
@@ -211,6 +260,7 @@ export class AgentStore {
           messages[lastIdx] = event.message;
         }
         this.setState({ ...this.state, messages });
+        this.persistMessages();
         break;
       }
       case "message_end": {
@@ -220,6 +270,7 @@ export class AgentStore {
           messages[lastIdx] = event.message;
         }
         this.setState({ ...this.state, messages });
+        this.persistMessages();
         break;
       }
       case "turn_end": {
@@ -228,6 +279,7 @@ export class AgentStore {
           messages.push(toolResult);
         }
         this.setState({ ...this.state, messages });
+        this.persistMessages();
         break;
       }
       case "tool_execution_start": {

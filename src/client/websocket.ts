@@ -8,6 +8,7 @@ export interface WebSocketClient {
   onMessage(handler: (msg: ServerMessage) => void): () => void;
   onOpen(handler: () => void): () => void;
   onClose(handler: () => void): () => void;
+  eagerReconnect(): void;
   get isOpen(): boolean;
 }
 
@@ -92,6 +93,15 @@ export function createWebSocketClient(url: string = getWebSocketUrl()): WebSocke
     return () => closeHandlers.delete(handler);
   }
 
+  function eagerReconnect(): void {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    reconnectDelay = 1000;
+    connect();
+  }
+
   return {
     connect,
     disconnect,
@@ -99,6 +109,7 @@ export function createWebSocketClient(url: string = getWebSocketUrl()): WebSocke
     onMessage,
     onOpen,
     onClose,
+    eagerReconnect,
     get isOpen() {
       return ws?.readyState === WebSocket.OPEN;
     },
