@@ -14,7 +14,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "dompurify": "^3.4.2",
     "express": "^4.21.0",
+    "highlight.js": "^11.11.1",
+    "marked": "^18.0.3",
     "open": "^10.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -22,6 +25,7 @@
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.0",
+    "@types/dompurify": "^3.0.5",
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.12",

@@ -1,4 +1,5 @@
 import React from "react";
+import { MarkdownRenderer } from "./MarkdownRenderer.js";
 import { ToolCall } from "./ToolCall.js";
 
 interface AssistantMessageProps {
@@ -15,7 +16,10 @@ export function AssistantMessage({
   if (!Array.isArray(content)) {
     return (
       <div className="message message-assistant">
-        <div className="message-text">{(message as any)?.content ?? ""}</div>
+        <MarkdownRenderer
+          content={(message as any)?.content ?? ""}
+          isStreaming={isStreaming}
+        />
       </div>
     );
   }
@@ -26,9 +30,11 @@ export function AssistantMessage({
         switch (block?.type) {
           case "text":
             return (
-              <div key={i} className="message-text">
-                {block.text}
-              </div>
+              <MarkdownRenderer
+                key={i}
+                content={block.text ?? ""}
+                isStreaming={isStreaming}
+              />
             );
           case "thinking":
             return (

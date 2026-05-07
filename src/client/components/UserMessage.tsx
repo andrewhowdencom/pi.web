@@ -1,4 +1,5 @@
 import React from "react";
+import { MarkdownRenderer } from "./MarkdownRenderer.js";
 
 interface UserMessageProps {
   message: unknown;
@@ -8,7 +9,7 @@ export function UserMessage({ message }: UserMessageProps) {
   const text = extractText(message);
   return (
     <div className="message message-user">
-      <div className="message-text">{text}</div>
+      <MarkdownRenderer content={text} />
     </div>
   );
 }
